@@ -1,0 +1,12 @@
+[project]
+name = "vad"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "numpy>=2.2.6",
+    "onnxruntime>=1.22.0",
+    "sounddevice>=0.5.2",
+    "soundfile>=0.13.1",
+]
