@@ -1,26 +1,49 @@
 import warnings
+from pathlib import Path
+import httpx
 
 import numpy as np
 import onnxruntime
+
+
+def get_cached_model():
+    cache_dir = Path.home() / '.cache' / 'silero-vad'
+    model_path = cache_dir / 'silero_vad.onnx'
+    
+    if not model_path.exists():
+        cache_dir.mkdir(parents=True, exist_ok=True)
+        url = "https://raw.githubusercontent.com/snakers4/silero-vad/master/src/silero_vad/data/silero_vad.onnx"
+        print(f"Downloading Silero VAD model to {model_path}")
+        try:
+            with httpx.stream('GET', url) as response:
+                response.raise_for_status()
+                with open(model_path, 'wb') as f:
+                    for chunk in response.iter_bytes():
+                        f.write(chunk)
+        except httpx.HTTPError as e:
+            raise RuntimeError(f"Failed to download model: {e}")
+    
+    return str(model_path)
 
 
 # The code below is adapted from https://github.com/snakers4/silero-vad.
 
 
 class SileroVADOnnx():
-    def __init__(self, path):
+    def __init__(self):
         opts = onnxruntime.SessionOptions()
         opts.inter_op_num_threads = 1
         opts.intra_op_num_threads = 1
 
+        model_path = get_cached_model()
         self.session = onnxruntime.InferenceSession(
-            path, 
+            model_path, 
             providers=['CPUExecutionProvider'], 
             sess_options=opts,
         )
 
         self.reset_states()
-        if '16k' in path:
+        if '16k' in model_path:
             warnings.warn('This model support only 16000 sampling rate!')
             self.sample_rates = [16000]
         else:
