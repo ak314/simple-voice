@@ -1,0 +1,166 @@
+import sounddevice as sd
+import numpy as np
+import time
+import queue
+import threading
+import logging
+
+from vad import SileroVADOnnx, VADIterator
+
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
+logger = logging.getLogger(__name__)
+
+
+# --- Configuration ---
+SAMPLE_RATE = 16000  # Silero VAD expects 16kHz
+CHANNELS = 1
+CHUNK_DURATION_MS = 32  # Duration of each audio chunk processed by VAD (milliseconds)
+CHUNK_SAMPLES = int(SAMPLE_RATE * CHUNK_DURATION_MS / 1000)
+
+# VAD Parameters (tune these to your needs)
+VAD_THRESHOLD = 0.5               # Speech probability threshold
+MIN_SILENCE_DURATION_MS = 700     # How long silence must be to be considered a "pause"
+SPEECH_PAD_MS = 30                # Add padding to the start/end of detected speech
+PRE_SPEECH_BUFFER_SIZE = 15       # Number of chunks to buffer before speech starts
+
+
+class Listener:
+    def __init__(
+        self,
+        processing_callback=None,
+        sample_rate=SAMPLE_RATE,
+        channels=CHANNELS,
+        chunk_duration_ms=CHUNK_DURATION_MS,
+        chunk_samples=CHUNK_SAMPLES,
+        vad_threshold=VAD_THRESHOLD,
+        min_silence_duration_ms=MIN_SILENCE_DURATION_MS,
+        speech_pad_ms=SPEECH_PAD_MS,
+        pre_speech_buffer_size=PRE_SPEECH_BUFFER_SIZE,
+    ):
+        self.processing_callback = (
+            processing_callback if processing_callback is not None 
+            else self.replay_processing_callback
+        )
+
+        self.sample_rate = sample_rate
+        self.channels = channels
+        self.chunk_duration_ms = chunk_duration_ms
+        self.chunk_samples = chunk_samples
+        self.vad_threshold = vad_threshold
+        self.min_silence_duration_ms = min_silence_duration_ms
+        self.speech_pad_ms = speech_pad_ms
+        self.pre_speech_buffer_size = pre_speech_buffer_size
+
+        self.vad_iterator = None
+        self.is_capturing_speech = False
+        self.frames_for_processing = []
+        self.queue = queue.Queue()
+        self.pre_speech_buffer = []
+
+        self.init_vad()
+        
+        self.playback_thread = threading.Thread(target=self.audio_processing_worker, daemon=True)
+        self.playback_thread.start()
+        
+        self.run()
+
+    def audio_processing_worker(self):
+        while True:
+            item = self.queue.get()
+            if item is None:
+                break
+            sample_rate, audio_array = item
+            while self.is_capturing_speech:
+                time.sleep(0.05)
+            self.processing_callback(sample_rate, audio_array)
+            self.queue.task_done()
+
+    def audio_callback(self, indata, frames, callback_time, status):
+        if status:
+            logger.warning(f"Sounddevice status: {status}")
+
+        if self.vad_iterator is None:
+            logger.error("VAD not initialized yet.")
+            return
+
+        try:
+            speech_dict = self.vad_iterator(indata[:, 0].astype(np.float32), return_seconds=False)
+        except Exception as e:
+            logger.error(f"Error calling VAD: {e}")
+            if self.vad_iterator:
+                self.vad_iterator.reset_states()
+            return
+
+        if speech_dict:
+            if "start" in speech_dict:
+                if not self.is_capturing_speech:
+                    logger.info("Speech started.")
+                    self.is_capturing_speech = True
+                    self.frames_for_processing = self.pre_speech_buffer.copy()
+                    self.pre_speech_buffer = []
+                self.frames_for_processing.append(indata.copy())
+            elif "end" in speech_dict:
+                if self.is_capturing_speech:
+                    logger.info("Speech ended (pause detected).")
+                    self.frames_for_processing.append(indata.copy())
+                    if self.frames_for_processing:
+                        self.queue.put((self.sample_rate, np.concatenate(self.frames_for_processing)))
+                    self.frames_for_processing = []
+                    self.is_capturing_speech = False
+                self.vad_iterator.reset_states()
+        elif self.is_capturing_speech:
+            self.frames_for_processing.append(indata.copy())
+        else:
+            self.pre_speech_buffer.append(indata.copy())
+            if len(self.pre_speech_buffer) > self.pre_speech_buffer_size:
+                self.pre_speech_buffer.pop(0)
+
+    @staticmethod
+    def replay_processing_callback(sample_rate, audio_array):
+        if audio_array.size == 0:
+            logger.warning("Nothing to replay.")
+            return
+        try:
+            sd.play(audio_array, samplerate=sample_rate, blocking=True)
+        except Exception as e:
+            logger.error(f"Error during playback: {e}")
+
+    def init_vad(self):
+        try:
+            self.vad_iterator = VADIterator(
+                SileroVADOnnx(),
+                threshold=self.vad_threshold,
+                sampling_rate=self.sample_rate,
+                min_silence_duration_ms=self.min_silence_duration_ms,
+                speech_pad_ms=self.speech_pad_ms,
+            )
+            logger.info("Silero VAD initialized successfully.")
+        except Exception as e:
+            logger.error(f"Error initializing Silero VAD: {e}")
+            exit()
+
+    def run(self):
+        logger.info("Listening...")
+        logger.info(f"Sample Rate: {self.sample_rate} Hz, Channels: {self.channels}")
+        logger.info(f"VAD Pause Detection: {self.min_silence_duration_ms}ms of silence")
+        logger.info("Press Ctrl+C to exit.")
+
+        try:
+            with sd.InputStream(
+                samplerate=self.sample_rate,
+                channels=self.channels,
+                dtype="float32",
+                blocksize=self.chunk_samples,
+                callback=self.audio_callback,
+            ):
+                while True:
+                    time.sleep(0.01)
+        except KeyboardInterrupt:
+            logger.info("\nExiting application.")
+            pass
+        except Exception as e:
+            logger.error(f"An unexpected error occurred: {e}")
