@@ -14,7 +14,7 @@ cd simple-voice
 uv sync
 ```
 
-## Test on recorded audio
+## Test VAD on recorded audio
 1. (if needed) record test file
 ```shell
 uv run record_test_file.py
@@ -24,7 +24,8 @@ uv run record_test_file.py
 uv run try_vad.py
 ```
 
-## Test on live audio
+## Run Listener for live audio
+Adapt the callback function in `try_listener.py` to handle the audio based on your needs. The default implementation simply plays the audio.
 ```shell
 uv run try_listener.py
 ```
