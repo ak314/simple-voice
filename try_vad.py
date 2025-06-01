@@ -1,6 +1,6 @@
 import soundfile as sf
 
-from vad import SileroVADOnnx, VADIterator
+from simple_voice import SileroVADOnnx, VADIterator
 
 
 if __name__ == "__main__":
