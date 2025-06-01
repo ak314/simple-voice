@@ -5,7 +5,7 @@ import queue
 import threading
 import logging
 
-from vad import SileroVADOnnx, VADIterator
+from .vad import SileroVADOnnx, VADIterator
 
 logging.basicConfig(
     level=logging.INFO,
