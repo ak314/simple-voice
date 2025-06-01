@@ -13,11 +13,18 @@ cd simple-voice
 ```shell
 uv sync
 ```
-3. (if needed) record test file
+
+## Test on recorded audio
+1. (if needed) record test file
 ```shell
 uv run record_test_file.py
 ```
-4. test vad
+2. test vad
 ```shell
 uv run try_vad.py
+```
+
+## Test on live audio
+```shell
+uv run try_listener.py
 ```
