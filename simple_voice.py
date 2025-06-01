@@ -59,7 +59,6 @@ class Listener:
         self.is_capturing_speech = False
         self.frames_for_processing = []
         self.queue = queue.Queue()
-        self.pre_speech_buffer = []
 
         self.init_vad()
         
@@ -95,29 +94,27 @@ class Listener:
                 self.vad_iterator.reset_states()
             return
 
+        # Always append the current frame
+        self.frames_for_processing.append(indata.copy())
+
         if speech_dict:
             if "start" in speech_dict:
                 if not self.is_capturing_speech:
                     logger.info("Speech started.")
                     self.is_capturing_speech = True
-                    self.frames_for_processing = self.pre_speech_buffer.copy()
-                    self.pre_speech_buffer = []
-                self.frames_for_processing.append(indata.copy())
             elif "end" in speech_dict:
                 if self.is_capturing_speech:
                     logger.info("Speech ended (pause detected).")
-                    self.frames_for_processing.append(indata.copy())
                     if self.frames_for_processing:
                         self.queue.put((self.sample_rate, np.concatenate(self.frames_for_processing)))
                     self.frames_for_processing = []
                     self.is_capturing_speech = False
                 self.vad_iterator.reset_states()
-        elif self.is_capturing_speech:
-            self.frames_for_processing.append(indata.copy())
-        else:
-            self.pre_speech_buffer.append(indata.copy())
-            if len(self.pre_speech_buffer) > self.pre_speech_buffer_size:
-                self.pre_speech_buffer.pop(0)
+
+        # Maintain buffer size when not capturing speech
+        if not self.is_capturing_speech:
+            while len(self.frames_for_processing) > self.pre_speech_buffer_size:
+                self.frames_for_processing.pop(0)
 
     @staticmethod
     def replay_processing_callback(sample_rate, audio_array):
