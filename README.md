@@ -32,7 +32,11 @@ if __name__ == "__main__":
 ```
 
 ### Test VAD separately on recorded audio
-1. (if needed) record test file
+1. install dependencies
+```shell
+pip install soundfile
+```
+2. (if needed) record test file
 ```python
 import sounddevice as sd
 import soundfile as sf
@@ -52,7 +56,7 @@ sd.wait()
 sf.write('recorded.wav', audio, samplerate)
 print("Done. Saved as recorded.wav")
 ```
-2. test vad
+3. test vad
 ```python
 import soundfile as sf
 
