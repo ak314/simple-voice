@@ -34,7 +34,6 @@ class Listener:
         processing_callback=None,
         sample_rate=SAMPLE_RATE,
         channels=CHANNELS,
-        chunk_duration_ms=CHUNK_DURATION_MS,
         chunk_samples=CHUNK_SAMPLES,
         vad_threshold=VAD_THRESHOLD,
         min_silence_duration_ms=MIN_SILENCE_DURATION_MS,
@@ -48,7 +47,6 @@ class Listener:
 
         self.sample_rate = sample_rate
         self.channels = channels
-        self.chunk_duration_ms = chunk_duration_ms
         self.chunk_samples = chunk_samples
         self.vad_threshold = vad_threshold
         self.min_silence_duration_ms = min_silence_duration_ms
