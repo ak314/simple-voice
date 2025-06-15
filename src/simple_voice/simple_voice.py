@@ -159,6 +159,5 @@ class Listener:
                     time.sleep(0.01)
         except KeyboardInterrupt:
             logger.info("\nExiting application.")
-            pass
         except Exception as e:
             logger.error(f"An unexpected error occurred: {e}")
