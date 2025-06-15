@@ -35,6 +35,7 @@ class Listener:
         sample_rate=SAMPLE_RATE,
         channels=CHANNELS,
         chunk_samples=CHUNK_SAMPLES,
+        device=None,
         vad_threshold=VAD_THRESHOLD,
         min_silence_duration_ms=MIN_SILENCE_DURATION_MS,
         speech_pad_ms=SPEECH_PAD_MS,
@@ -48,6 +49,7 @@ class Listener:
         self.sample_rate = sample_rate
         self.channels = channels
         self.chunk_samples = chunk_samples
+        self.device = device
         self.vad_threshold = vad_threshold
         self.min_silence_duration_ms = min_silence_duration_ms
         self.speech_pad_ms = speech_pad_ms
@@ -151,6 +153,7 @@ class Listener:
                 dtype="float32",
                 blocksize=self.chunk_samples,
                 callback=self.audio_callback,
+                device=self.device,
             ):
                 while True:
                     time.sleep(0.01)
