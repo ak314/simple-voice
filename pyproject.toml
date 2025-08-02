@@ -9,9 +9,12 @@ authors = [
 requires-python = ">=3.10"
 dependencies = [
     "httpx>=0.28.1",
+    "huggingface-hub>=0.33.4",
     "numpy>=2.2.6",
     "onnxruntime>=1.22.0",
     "sounddevice>=0.5.2",
+    "soundfile>=0.13.1",
+    "tokenizers>=0.21.2",
 ]
 
 [build-system]
