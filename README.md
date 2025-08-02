@@ -73,3 +73,8 @@ if __name__ == "__main__":
         if result:
             print(result)
 ```
+
+### Run automated tests
+```shell
+uv run python -m unittest discover -s tests
+```
