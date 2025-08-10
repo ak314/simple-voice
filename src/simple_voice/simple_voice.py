@@ -6,6 +6,7 @@ import threading
 import logging
 
 from .vad import SileroVADOnnx, VADIterator
+from .stt import Moonshine
 
 logging.basicConfig(
     level=logging.INFO,
@@ -31,6 +32,8 @@ PRE_SPEECH_BUFFER_SIZE = 15       # Number of chunks to buffer before speech sta
 class Listener:
     def __init__(
         self,
+        stt_model_name="tiny",
+        stt_model_precision="float",
         processing_callback=None,
         sample_rate=SAMPLE_RATE,
         channels=CHANNELS,
@@ -41,6 +44,8 @@ class Listener:
         speech_pad_ms=SPEECH_PAD_MS,
         pre_speech_buffer_size=PRE_SPEECH_BUFFER_SIZE,
     ):
+        self.stt_model_name = stt_model_name
+        self.stt_model_precision = stt_model_precision
         self.processing_callback = (
             processing_callback if processing_callback is not None 
             else self.replay_processing_callback
@@ -61,11 +66,10 @@ class Listener:
         self.queue = queue.Queue()
 
         self.init_vad()
-        
-        self.audio_processing_thread = threading.Thread(target=self.audio_processing_worker, daemon=True)
-        self.audio_processing_thread.start()
-        
-        self.run()
+        self.init_stt()
+
+        # self.audio_processing_thread = threading.Thread(target=self.audio_processing_worker, daemon=True)
+        # self.audio_processing_thread.start()
 
     def audio_processing_worker(self):
         while True:
@@ -140,6 +144,17 @@ class Listener:
             logger.error(f"Error initializing Silero VAD: {e}")
             exit()
 
+    def init_stt(self):
+        try:
+            self.stt = Moonshine(
+                model_name=self.stt_model_name,
+                model_precision=self.stt_model_precision
+            )
+            logger.info("Moonshine STT initialized successfully.")
+        except Exception as e:
+            logger.error(f"Error initializing Moonshine STT: {e}")
+            exit()
+
     def run(self):
         logger.info("Listening...")
         logger.info(f"Sample Rate: {self.sample_rate} Hz, Channels: {self.channels}")
@@ -157,6 +172,60 @@ class Listener:
             ):
                 while True:
                     time.sleep(0.01)
+        except KeyboardInterrupt:
+            logger.info("\nExiting application.")
+        except Exception as e:
+            logger.error(f"An unexpected error occurred: {e}")
+
+    def transcribe_audio(self, audio_array: np.ndarray) -> str:
+        logger.info("Transcribing audio...")
+        audio_array = audio_array.astype(np.float32)
+        text = self.stt.transcribe_audio(audio_array)
+        logger.info(f"Transcription: {text}")
+        return text
+
+    def text(self):
+        try:
+            with sd.InputStream(
+                samplerate=self.sample_rate,
+                channels=self.channels,
+                dtype="float32",
+                blocksize=self.chunk_samples,
+                callback=self.audio_callback,
+                device=self.device,
+            ):
+                while True:
+                    if not self.queue.empty():
+                        sample_rate, audio_array = self.queue.get()
+                        if audio_array.size > 0:
+                            text = self.transcribe_audio(audio_array)
+                            self.queue.task_done()
+                            yield text
+                    else:
+                        time.sleep(0.1)
+        except KeyboardInterrupt:
+            logger.info("\nExiting application.")
+        except Exception as e:
+            logger.error(f"An unexpected error occurred: {e}")
+
+    def audio(self):
+        try:
+            with sd.InputStream(
+                samplerate=self.sample_rate,
+                channels=self.channels,
+                dtype="float32",
+                blocksize=self.chunk_samples,
+                callback=self.audio_callback,
+                device=self.device,
+            ):
+                while True:
+                    if not self.queue.empty():
+                        sample_rate, audio_array = self.queue.get()
+                        if audio_array.size > 0:
+                            self.queue.task_done()
+                            yield audio_array
+                    else:
+                        time.sleep(0.1)
         except KeyboardInterrupt:
             logger.info("\nExiting application.")
         except Exception as e:
