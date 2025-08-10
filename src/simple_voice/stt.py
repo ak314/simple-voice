@@ -76,11 +76,16 @@ class Moonshine:
                     past_key_values[k] = v
         return [tokens]
 
-    def transcribe(self, audio_path):
+    def transcribe_audio(self, audio: np.ndarray):
+        if audio.ndim > 1:
+            audio = audio.flatten()
+        audio = audio.reshape(1, -1)
+        tokens = self.generate(audio)[0]
+        return self.tokenizer.decode(tokens, skip_special_tokens=True)
+
+    def transcribe_file(self, audio_path):
         import soundfile as sf
         audio, sr = sf.read(audio_path, dtype="float32")
         if sr != 16000:
             raise ValueError("Audio file must have a 16kHz sample rate")
-        audio = audio.reshape(1, -1)
-        tokens = self.generate(audio)[0]
-        return self.tokenizer.decode(tokens, skip_special_tokens=True)
+        return self.transcribe_audio(audio)
