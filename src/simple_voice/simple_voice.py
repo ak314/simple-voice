@@ -62,8 +62,8 @@ class Listener:
 
         self.init_vad()
         
-        self.playback_thread = threading.Thread(target=self.audio_processing_worker, daemon=True)
-        self.playback_thread.start()
+        self.audio_processing_thread = threading.Thread(target=self.audio_processing_worker, daemon=True)
+        self.audio_processing_thread.start()
         
         self.run()
 
