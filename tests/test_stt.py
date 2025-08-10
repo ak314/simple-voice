@@ -6,7 +6,7 @@ class TestMoonshine(unittest.TestCase):
         self.model = Moonshine()
 
     def test_transcribe_non_silent_audio(self):
-        transcription = self.model.transcribe("tests/assets/sample.wav")
+        transcription = self.model.transcribe_file("tests/assets/sample.wav")
         self.assertEqual(transcription, "Here is sentence number one. And here is sentence number two.")
 
 
