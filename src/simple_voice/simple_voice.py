@@ -133,7 +133,7 @@ class Listener:
         logger.info(f"Transcription: {text}")
         return text
 
-    def text(self, callback=None):
+    def _listen_and_process(self, process_item, callback=None):
         try:
             with sd.InputStream(
                 samplerate=self.sample_rate,
@@ -145,13 +145,13 @@ class Listener:
             ):
                 while True:
                     if not self.queue.empty():
-                        sample_rate, audio_array = self.queue.get()
+                        _sample_rate, audio_array = self.queue.get()
                         if audio_array.size > 0:
-                            text = self.transcribe_audio(audio_array)
+                            processed_item = process_item(audio_array)
                             self.queue.task_done()
                             if callback:
-                                text = callback(text)
-                            yield text
+                                processed_item = callback(processed_item)
+                            yield processed_item
                     else:
                         time.sleep(0.1)
         except KeyboardInterrupt:
@@ -159,27 +159,8 @@ class Listener:
         except Exception as e:
             logger.error(f"An unexpected error occurred: {e}")
 
+    def text(self, callback=None):
+        return self._listen_and_process(self.transcribe_audio, callback)
+
     def audio(self, callback=None):
-        try:
-            with sd.InputStream(
-                samplerate=self.sample_rate,
-                channels=self.channels,
-                dtype="float32",
-                blocksize=self.chunk_samples,
-                callback=self.audio_callback,
-                device=self.device,
-            ):
-                while True:
-                    if not self.queue.empty():
-                        sample_rate, audio_array = self.queue.get()
-                        if audio_array.size > 0:
-                            self.queue.task_done()
-                            if callback:
-                                audio_array = callback(audio_array)
-                            yield audio_array
-                    else:
-                        time.sleep(0.1)
-        except KeyboardInterrupt:
-            logger.info("\nExiting application.")
-        except Exception as e:
-            logger.error(f"An unexpected error occurred: {e}")
+        return self._listen_and_process(lambda audio_array: audio_array, callback)
