@@ -14,7 +14,7 @@ class TestListener(unittest.TestCase):
         self.audio, self.sr = sf.read("tests/assets/sample.wav", dtype='float32')
 
     @patch('simple_voice.simple_voice.sd.InputStream')
-    def test_to_text(self, mock_input_stream):
+    def test_transcription(self, mock_input_stream):
         """Test that to_text correctly processes an audio file and yields transcriptions."""
         
         simulation_finished = threading.Event()
@@ -56,7 +56,7 @@ class TestListener(unittest.TestCase):
         result_queue = queue.Queue()
         
         def run_generator():
-            for text in self.listener.text():
+            for text in self.listener.transcription():
                 result_queue.put(text)
 
         generator_thread = threading.Thread(target=run_generator)
@@ -81,7 +81,7 @@ class TestListener(unittest.TestCase):
         self.assertEqual(full_transcription.strip(), expected_transcription)
 
     @patch('simple_voice.simple_voice.sd.InputStream')
-    def test_text_with_callback(self, mock_input_stream):
+    def test_transcription_with_callback(self, mock_input_stream):
         """Test that text method correctly applies the callback to the transcription."""
         
         simulation_finished = threading.Event()
@@ -124,7 +124,7 @@ class TestListener(unittest.TestCase):
             return text.upper()
 
         def run_generator():
-            for text in self.listener.text(callback=text_modifier):
+            for text in self.listener.transcription(callback=text_modifier):
                 result_queue.put(text)
 
         generator_thread = threading.Thread(target=run_generator)

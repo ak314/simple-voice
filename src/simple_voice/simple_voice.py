@@ -159,7 +159,7 @@ class Listener:
         except Exception as e:
             logger.error(f"An unexpected error occurred: {e}")
 
-    def text(self, callback=None):
+    def transcription(self, callback=None):
         return self._listen_and_process(self.transcribe_audio, callback)
 
     def audio(self, callback=None):
