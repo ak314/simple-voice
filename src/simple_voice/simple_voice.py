@@ -188,7 +188,7 @@ class Listener:
         except Exception as e:
             logger.error(f"An unexpected error occurred: {e}")
 
-    def audio(self):
+    def audio(self, callable=None):
         try:
             with sd.InputStream(
                 samplerate=self.sample_rate,
@@ -203,6 +203,8 @@ class Listener:
                         sample_rate, audio_array = self.queue.get()
                         if audio_array.size > 0:
                             self.queue.task_done()
+                            if callable:
+                                audio_array = callable(audio_array)
                             yield audio_array
                     else:
                         time.sleep(0.1)
