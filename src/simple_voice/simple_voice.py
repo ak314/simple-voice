@@ -155,28 +155,6 @@ class Listener:
             logger.error(f"Error initializing Moonshine STT: {e}")
             exit()
 
-    def run(self):
-        logger.info("Listening...")
-        logger.info(f"Sample Rate: {self.sample_rate} Hz, Channels: {self.channels}")
-        logger.info(f"VAD Pause Detection: {self.min_silence_duration_ms}ms of silence")
-        logger.info("Press Ctrl+C to exit.")
-
-        try:
-            with sd.InputStream(
-                samplerate=self.sample_rate,
-                channels=self.channels,
-                dtype="float32",
-                blocksize=self.chunk_samples,
-                callback=self.audio_callback,
-                device=self.device,
-            ):
-                while True:
-                    time.sleep(0.01)
-        except KeyboardInterrupt:
-            logger.info("\nExiting application.")
-        except Exception as e:
-            logger.error(f"An unexpected error occurred: {e}")
-
     def transcribe_audio(self, audio_array: np.ndarray) -> str:
         logger.info("Transcribing audio...")
         audio_array = audio_array.astype(np.float32)
