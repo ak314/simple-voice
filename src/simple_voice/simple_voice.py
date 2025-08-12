@@ -149,7 +149,7 @@ class Listener:
                         if audio_array.size > 0:
                             text = self.transcribe_audio(audio_array)
                             self.queue.task_done()
-                            if callable(callback):
+                            if callback:
                                 text = callback(text)
                             yield text
                     else:
@@ -159,7 +159,7 @@ class Listener:
         except Exception as e:
             logger.error(f"An unexpected error occurred: {e}")
 
-    def audio(self, callable=None):
+    def audio(self, callback=None):
         try:
             with sd.InputStream(
                 samplerate=self.sample_rate,
@@ -174,7 +174,7 @@ class Listener:
                         sample_rate, audio_array = self.queue.get()
                         if audio_array.size > 0:
                             self.queue.task_done()
-                            if callable:
+                            if callback:
                                 audio_array = callable(audio_array)
                             yield audio_array
                     else:
