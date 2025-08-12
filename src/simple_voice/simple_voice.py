@@ -162,7 +162,7 @@ class Listener:
         logger.info(f"Transcription: {text}")
         return text
 
-    def text(self):
+    def text(self, callback=None):
         try:
             with sd.InputStream(
                 samplerate=self.sample_rate,
@@ -178,6 +178,8 @@ class Listener:
                         if audio_array.size > 0:
                             text = self.transcribe_audio(audio_array)
                             self.queue.task_done()
+                            if callable(callback):
+                                text = callback(text)
                             yield text
                     else:
                         time.sleep(0.1)
