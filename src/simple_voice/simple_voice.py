@@ -175,7 +175,7 @@ class Listener:
                         if audio_array.size > 0:
                             self.queue.task_done()
                             if callback:
-                                audio_array = callable(audio_array)
+                                audio_array = callback(audio_array)
                             yield audio_array
                     else:
                         time.sleep(0.1)
