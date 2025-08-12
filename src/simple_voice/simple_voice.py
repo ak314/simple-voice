@@ -34,7 +34,6 @@ class Listener:
         self,
         stt_model_name="tiny",
         stt_model_precision="float",
-        processing_callback=None,
         sample_rate=SAMPLE_RATE,
         channels=CHANNELS,
         chunk_samples=CHUNK_SAMPLES,
@@ -46,10 +45,6 @@ class Listener:
     ):
         self.stt_model_name = stt_model_name
         self.stt_model_precision = stt_model_precision
-        self.processing_callback = (
-            processing_callback if processing_callback is not None 
-            else self.replay_processing_callback
-        )
 
         self.sample_rate = sample_rate
         self.channels = channels
@@ -67,20 +62,6 @@ class Listener:
 
         self.init_vad()
         self.init_stt()
-
-        # self.audio_processing_thread = threading.Thread(target=self.audio_processing_worker, daemon=True)
-        # self.audio_processing_thread.start()
-
-    def audio_processing_worker(self):
-        while True:
-            item = self.queue.get()
-            if item is None:
-                break
-            sample_rate, audio_array = item
-            while self.is_capturing_speech:
-                time.sleep(0.05)
-            self.processing_callback(sample_rate, audio_array)
-            self.queue.task_done()
 
     def audio_callback(self, indata, frames, callback_time, status):
         if status:
@@ -119,16 +100,6 @@ class Listener:
         if not self.is_capturing_speech:
             while len(self.frames_for_processing) > self.pre_speech_buffer_size:
                 self.frames_for_processing.pop(0)
-
-    @staticmethod
-    def replay_processing_callback(sample_rate, audio_array):
-        if audio_array.size == 0:
-            logger.warning("Nothing to replay.")
-            return
-        try:
-            sd.play(audio_array, samplerate=sample_rate, blocking=True)
-        except Exception as e:
-            logger.error(f"Error during playback: {e}")
 
     def init_vad(self):
         try:
