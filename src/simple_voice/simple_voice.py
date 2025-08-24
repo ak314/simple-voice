@@ -33,27 +33,22 @@ class Listener:
     def __init__(
         self,
         stt_model: Moonshine = None,
+        vad_iterator: VADIterator = None,
         sample_rate=SAMPLE_RATE,
         channels=CHANNELS,
         chunk_samples=CHUNK_SAMPLES,
         device=None,
-        vad_threshold=VAD_THRESHOLD,
-        min_silence_duration_ms=MIN_SILENCE_DURATION_MS,
-        speech_pad_ms=SPEECH_PAD_MS,
         pre_speech_buffer_size=PRE_SPEECH_BUFFER_SIZE,
     ):
         self.stt = stt_model
+        self.vad_iterator = vad_iterator
 
         self.sample_rate = sample_rate
         self.channels = channels
         self.chunk_samples = chunk_samples
         self.device = device
-        self.vad_threshold = vad_threshold
-        self.min_silence_duration_ms = min_silence_duration_ms
-        self.speech_pad_ms = speech_pad_ms
         self.pre_speech_buffer_size = pre_speech_buffer_size
 
-        self.vad_iterator = None
         self.is_capturing_speech = False
         self.frames_for_processing = []
         self.queue = queue.Queue()
@@ -101,13 +96,17 @@ class Listener:
 
     def init_vad(self):
         try:
-            self.vad_iterator = VADIterator(
-                SileroVADOnnx(),
-                threshold=self.vad_threshold,
-                sampling_rate=self.sample_rate,
-                min_silence_duration_ms=self.min_silence_duration_ms,
-                speech_pad_ms=self.speech_pad_ms,
-            )
+            if self.vad_iterator:
+                logger.info("Using provided VAD iterator.")
+            else:
+                logger.info("Initializing default VAD iterator.")
+                self.vad_iterator = VADIterator(
+                    SileroVADOnnx(),
+                    threshold=VAD_THRESHOLD,
+                    sampling_rate=self.sample_rate,
+                    min_silence_duration_ms=MIN_SILENCE_DURATION_MS,
+                    speech_pad_ms=SPEECH_PAD_MS,
+                )
             logger.info("Silero VAD initialized successfully.")
         except Exception as e:
             logger.error(f"Error initializing Silero VAD: {e}")

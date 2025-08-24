@@ -6,13 +6,14 @@ import threading
 import time
 import queue
 
-from simple_voice.simple_voice import Listener, CHUNK_DURATION_MS
+from simple_voice.simple_voice import Listener, CHUNK_DURATION_MS, MIN_SILENCE_DURATION_MS
 
 
 class AudioSimulator:
-    def __init__(self, listener, audio):
+    def __init__(self, listener, audio, min_silence_duration_ms):
         self.listener = listener
         self.audio = audio
+        self.min_silence_duration_ms = min_silence_duration_ms
         self.simulation_finished = threading.Event()
         self.mock_stream_instance = MagicMock()
         self.simulator_thread = threading.Thread(
@@ -32,7 +33,7 @@ class AudioSimulator:
             callback(indata, len(chunk), None, None)
             time.sleep(CHUNK_DURATION_MS / 1000.0)
 
-        silence_duration_ms = self.listener.min_silence_duration_ms + 100
+        silence_duration_ms = self.min_silence_duration_ms + 100
         num_silence_chunks = int(silence_duration_ms / CHUNK_DURATION_MS)
         silence_chunk = np.zeros(chunk_samples).reshape(-1, 1)
         for _ in range(num_silence_chunks):
@@ -53,6 +54,7 @@ class AudioSimulator:
 
 class TestListener(unittest.TestCase):
     def setUp(self):
+        self.min_silence_duration_ms = MIN_SILENCE_DURATION_MS
         self.listener = Listener()
         self.audio, self.sr = sf.read("tests/assets/sample.wav", dtype='float32')
 
@@ -60,7 +62,7 @@ class TestListener(unittest.TestCase):
     def test_transcription(self, mock_input_stream):
         """Test that to_text correctly processes an audio file and yields transcriptions."""
         
-        simulator = AudioSimulator(self.listener, self.audio)
+        simulator = AudioSimulator(self.listener, self.audio, self.min_silence_duration_ms)
         mock_input_stream.return_value = simulator.mock_stream_instance
 
         result_queue = queue.Queue()
@@ -92,7 +94,7 @@ class TestListener(unittest.TestCase):
     def test_transcription_with_callback(self, mock_input_stream):
         """Test that text method correctly applies the callback to the transcription."""
         
-        simulator = AudioSimulator(self.listener, self.audio)
+        simulator = AudioSimulator(self.listener, self.audio, self.min_silence_duration_ms)
         mock_input_stream.return_value = simulator.mock_stream_instance
 
         result_queue = queue.Queue()
@@ -127,7 +129,7 @@ class TestListener(unittest.TestCase):
     def test_audio(self, mock_input_stream):
         """Test that audio method correctly yields audio chunks."""
         
-        simulator = AudioSimulator(self.listener, self.audio)
+        simulator = AudioSimulator(self.listener, self.audio, self.min_silence_duration_ms)
         mock_input_stream.return_value = simulator.mock_stream_instance
 
         result_queue = queue.Queue()
@@ -160,7 +162,7 @@ class TestListener(unittest.TestCase):
     def test_audio_with_callback(self, mock_input_stream):
         """Test that audio method correctly applies the callback to the audio."""
         
-        simulator = AudioSimulator(self.listener, self.audio)
+        simulator = AudioSimulator(self.listener, self.audio, self.min_silence_duration_ms)
         mock_input_stream.return_value = simulator.mock_stream_instance
 
         result_queue = queue.Queue()
