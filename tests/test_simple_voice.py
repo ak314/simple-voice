@@ -100,7 +100,7 @@ class TestListener(unittest.TestCase):
         result_queue = queue.Queue()
         
         def text_modifier(text):
-            return text.upper()
+            yield text.upper()
 
         def run_generator():
             for text in self.listener.transcription(callback=text_modifier):
@@ -168,7 +168,7 @@ class TestListener(unittest.TestCase):
         result_queue = queue.Queue()
         
         def audio_silencer(audio_array):
-            return np.zeros_like(audio_array)
+            yield np.zeros_like(audio_array)
 
         def run_generator():
             for audio_chunk in self.listener.audio(callback=audio_silencer):
