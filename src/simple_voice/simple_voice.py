@@ -32,8 +32,7 @@ PRE_SPEECH_BUFFER_SIZE = 15       # Number of chunks to buffer before speech sta
 class Listener:
     def __init__(
         self,
-        stt_model_name="tiny",
-        stt_model_precision="float",
+        stt_model: Moonshine = None,
         sample_rate=SAMPLE_RATE,
         channels=CHANNELS,
         chunk_samples=CHUNK_SAMPLES,
@@ -43,8 +42,7 @@ class Listener:
         speech_pad_ms=SPEECH_PAD_MS,
         pre_speech_buffer_size=PRE_SPEECH_BUFFER_SIZE,
     ):
-        self.stt_model_name = stt_model_name
-        self.stt_model_precision = stt_model_precision
+        self.stt = stt_model
 
         self.sample_rate = sample_rate
         self.channels = channels
@@ -117,10 +115,14 @@ class Listener:
 
     def init_stt(self):
         try:
-            self.stt = Moonshine(
-                model_name=self.stt_model_name,
-                model_precision=self.stt_model_precision
-            )
+            if self.stt:
+                logger.info("Using provided STT model.")
+            else:
+                logger.info("Initializing default Moonshine STT model.")
+                self.stt = Moonshine(
+                    model_name="tiny",
+                    model_precision="float"
+                )
             logger.info("Moonshine STT initialized successfully.")
         except Exception as e:
             logger.error(f"Error initializing Moonshine STT: {e}")
