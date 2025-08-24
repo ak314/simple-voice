@@ -151,8 +151,9 @@ class Listener:
                             processed_item = process_item(audio_array)
                             self.queue.task_done()
                             if callback:
-                                processed_item = callback(processed_item)
-                            yield processed_item
+                                yield from callback(processed_item)
+                            else:
+                                yield processed_item
                     else:
                         time.sleep(0.1)
         except KeyboardInterrupt:
