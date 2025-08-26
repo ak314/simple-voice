@@ -6,6 +6,9 @@ Simple Voice exposes simple APIs to detect speech activity and capture raw audio
 
 ## Getting Started
 
+⚠️ **Status:** Experimental - currently under active development.  
+You can install it directly from GitHub if you'd like to try it out.
+
 ### Install simple-voice
 ```shell
 pip install git+https://github.com/ak314/simple-voice.git
